@@ -16,6 +16,7 @@ interface transactionProps {
 }
 
 interface Transaction {
+  id: number
   title: string
   money: number
   createdAt: string
@@ -45,6 +46,23 @@ export default function Home({ params }: transactionProps) {
         console.error("Error fetching data", error)
         setLoading(true)
       })
+  }
+
+  const deleteButton = async (id: number) => {
+    try {
+
+      if (!confirm("Do you want to delete this transaction ?")) {
+        return
+      }
+      const res = await fetch(`/api/transaction/${id}`, { method: "DELETE" })
+      if (res.ok) {
+        fetchData()
+        alert("Delete successfuly")
+      }
+
+    } catch (error) {
+      console.error("Error deleting selected transaction :", error)
+    }
   }
 
   useEffect(() => {
@@ -103,32 +121,38 @@ export default function Home({ params }: transactionProps) {
             </Button>
           </div>
 
-          <Card className='p-5 max-h-99 overflow-y-auto'>
+          <Card className='p-5 max-h-99 h-99 overflow-y-auto'>
             {/* transaction data */}
             <div className="space-y-3">
-              {transaction.map((transaction: any) => (
-                <Card key={transaction.id} className="p-4 flex flex-col md:flex-row pb-4">
-                  <div className="w-full md:w-12/13 flex items-center justify-center flex-col text-center gap-3">
-                    <span className="font-bold text-lg text-gray-700">
-                      {transaction.title}
-                    </span>
-                    <span className={transaction.money > 0 ? "text-lg text-green-500" : "text-lg text-red-500"}>
-                      {transaction.money > 0
-                        ? `฿ +${transaction.money}`
-                        : `฿ ${transaction.money}`
-                      }
-                    </span>
-                  </div>
-                  <div className='w-full md:w-1/13 flex flex-col gap-2 items-end justify-end pr-2'>
-                    <Button variant="outline" size="sm" className='w-fit'>
-                      <Edit />
-                    </Button>
-                    <Button variant="destructive" size="sm" className='w-fit'>
-                      <Trash />
-                    </Button>
-                  </div>
-                </Card>
-              ))}
+              {transaction.length === 0
+                ? <Card className='flex items-center justify-between text-gray-600 p-30 px-10 relative top-10'>No Transaction</Card>
+                :
+                transaction.map((transaction: Transaction) => (
+                  <Card key={transaction.id} className="p-4 flex flex-col md:flex-row pb-4">
+                    <div className="w-full md:w-12/13 flex items-center justify-center flex-col text-center gap-3">
+                      <span className="font-bold text-lg text-gray-700">
+                        {transaction.title}
+                      </span>
+                      <span className={transaction.money > 0 ? "text-lg text-green-500" : "text-lg text-red-500"}>
+                        {transaction.money > 0
+                          ? `฿ +${transaction.money}`
+                          : `฿ ${transaction.money}`
+                        }
+                      </span>
+                    </div>
+                    <div className='w-full md:w-1/13 flex flex-col gap-2 items-end justify-end pr-2'>
+                      <Button variant="outline" size="sm" className='w-fit'>
+                        <Edit />
+                      </Button>
+                      <Button variant="destructive" size="sm" className='w-fit' onClick={() => deleteButton(transaction.id)}>
+                        <Trash />
+                      </Button>
+                    </div>
+                  </Card>
+                ))
+              }
+
+
             </div>
           </Card>
         </div>
