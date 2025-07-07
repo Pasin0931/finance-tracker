@@ -5,15 +5,8 @@ import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
-import { Loader2, BarChart2, Plus, LogOut, Edit, Trash2, Calendar, Trash } from 'lucide-react'
-
-interface transactionProps {
-  params: {
-    title: string
-    money: number
-    createdAt: string
-  }
-}
+import { Loader2, BarChart2, Plus, LogOut, Edit, Trash2, Calendar, Trash, XIcon } from 'lucide-react'
+import { Input } from "@/components/ui/input"
 
 interface Transaction {
   id: number
@@ -22,11 +15,15 @@ interface Transaction {
   createdAt: string
 }
 
-export default function Home({ params }: transactionProps) {
+export default function Home() {
 
   const [loading, setLoading] = useState(true)
   const [transaction, setTransaction] = useState<Transaction[]>([])
-  const [totalBalance, setTotalBalance] = useState(0)
+  const [isCreating, setIsCreating] = useState(false)
+  const [isEditting, setIsEditting] = useState(false)
+  const [id, setId] = useState(1)
+  const [title, setTitle] = useState("")
+  const [money, setMoney] = useState(0)
 
   const incomeTransactions = transaction.filter(t => t.money > 0)
   const expenseTransactions = transaction.filter(t => t.money < 0)
@@ -48,7 +45,7 @@ export default function Home({ params }: transactionProps) {
       })
   }
 
-  const deleteButton = async (id: number) => {
+  const deleteTransaction = async (id: number) => {
     try {
 
       if (!confirm("Do you want to delete this transaction ?")) {
@@ -57,11 +54,63 @@ export default function Home({ params }: transactionProps) {
       const res = await fetch(`/api/transaction/${id}`, { method: "DELETE" })
       if (res.ok) {
         fetchData()
-        alert("Delete successfuly")
       }
 
     } catch (error) {
       console.error("Error deleting selected transaction :", error)
+    }
+  }
+
+  const clearAll = async () => {
+    try {
+
+      if (!confirm("Do you want to clear all transactions ?")) {
+        return
+      }
+      const res = await fetch(`/api/transaction/`, { method: "DELETE" })
+      if (res.ok) {
+        fetchData()
+      }
+
+    } catch (error) {
+      console.error("Error clearing transaction :", error)
+    }
+  }
+
+  const createTransaction = async () => {
+    setIsEditting(false)
+
+    if (!title) return alert("Title is required !")
+
+    const newTransaction = { title, money }
+    try {
+      const res = await fetch('/api/transaction/', { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newTransaction) })
+      if (res.ok) {
+        console.log("Create successfuly")
+        fetchData()
+      }
+    } catch (error) {
+      console.error("Error creating transaction", error)
+      alert("Error creating")
+    }
+  }
+
+  const editTransaction = async (id: number) => {
+    setIsCreating(false)
+
+    if (!title) return alert("Title is required !")
+
+    const updateT = { title, money }
+    try {
+      const res = await fetch(`/api/transaction/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updateT) })
+      if (res.ok) {
+        console.log("Update successfuly")
+        alert("Updated")
+        fetchData()
+      }
+    } catch (error) {
+      console.error("Error creating transaction", error)
+      alert("Error updating")
     }
   }
 
@@ -78,6 +127,7 @@ export default function Home({ params }: transactionProps) {
   }
 
   return (
+
     <motion.div className="min-h-screen bg-gray-50 p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -112,50 +162,155 @@ export default function Home({ params }: transactionProps) {
           </Card>
         </div>
 
-        {/* Recent Transactions */}
-        <div className="mb-10">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">Recent Transactions</h2>
-            <Button variant="default" className="flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Add Transaction
-            </Button>
-          </div>
+        {/* -------------------------------------------------------------------------------------------------------------------------------------------------------------- */}
 
-          <Card className='p-5 max-h-99 h-99 overflow-y-auto'>
-            {/* transaction data */}
-            <div className="space-y-3">
-              {transaction.length === 0
-                ? <Card className='flex items-center justify-between text-gray-600 p-30 px-10 relative top-10'>No Transaction</Card>
-                :
-                transaction.map((transaction: Transaction) => (
-                  <Card key={transaction.id} className="p-4 flex flex-col md:flex-row pb-4">
-                    <div className="w-full md:w-12/13 flex items-center justify-center flex-col text-center gap-3">
-                      <span className="font-bold text-lg text-gray-700">
-                        {transaction.title}
-                      </span>
-                      <span className={transaction.money > 0 ? "text-lg text-green-500" : "text-lg text-red-500"}>
-                        {transaction.money > 0
-                          ? `฿ +${transaction.money}`
-                          : `฿ ${transaction.money}`
-                        }
-                      </span>
-                    </div>
-                    <div className='w-full md:w-1/13 flex flex-col gap-2 items-end justify-end pr-2'>
-                      <Button variant="outline" size="sm" className='w-fit'>
-                        <Edit />
-                      </Button>
-                      <Button variant="destructive" size="sm" className='w-fit' onClick={() => deleteButton(transaction.id)}>
-                        <Trash />
-                      </Button>
-                    </div>
-                  </Card>
-                ))
-              }
+        <div className={`mb-10 grid gap-6 ${isCreating || isEditting ? "md:grid-cols-3" : "grid-cols-1"}`}>
+          {/* Creating a transaction */}
+          {isCreating && (
+            <motion.div className="col-span-1"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}>
+              <Card className="p-6 h-full">
+                <h3 className="text-xl font-semibold text-gray-800">Creating . . .</h3>
+                <Input
+                  placeholder="Title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)} />
+                <Input
+                  placeholder="Money"
+                  type='number'
+                  value={money}
+                  step={1}
+                  onChange={(e) => {
+                    if (isNaN(money)) {
+                      setMoney(0)
+                    }
+                    setMoney(parseFloat(e.target.value))
+                  }} />
+                <div className='flex justify-end mt-2 space-x-4'>
+                  <Button variant='outline' className='rounded-md' onClick={() => setIsCreating(false)}>
+                    Close
+                  </Button>
+                  <Button variant='default' className='rounded-md' onClick={createTransaction}>
+                    Add
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* Editing a transaction */}
+          {isEditting && (
+            <motion.div className="col-span-1"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.1 }}>
+              <Card className="p-6 h-full">
+                <h3 className="text-xl font-semibold text-gray-800">Editing "{title}"</h3>
+                <Input
+                  placeholder="Title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)} />
+                <Input
+                  placeholder="Money"
+                  type='number'
+                  step={1}
+                  value={money}
+                  onChange={(e) => {
+                    if (isNaN(money)) {
+                      setMoney(0)
+                    }
+                    setMoney(parseFloat(e.target.value))
+                  }} />
+                <div className='flex justify-end mt-2 space-x-4'>
+                  <Button variant='outline' className='rounded-md' onClick={() => setIsEditting(false)}>
+                    Close
+                  </Button>
+                  <Button variant='default' className='rounded-md' onClick={() => editTransaction(id)}>
+                    Update
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
 
 
+          {/* Recent Transactions */}
+          <div className="col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">Recent Transactions</h2>
+
+              <div className='flex items-center justify-between gap-2'>
+                <Button variant="default" className="flex items-center gap-2" onClick={() => {
+                  setIsCreating(true)
+                  setIsEditting(false)
+                  setTitle("")
+                  setMoney(0)
+                  setId(0)
+                }}>
+                  <Plus className="w-4 h-4" /> Add Transaction
+                </Button>
+                <Button variant="destructive" className="flex items-center gap-2" onClick={() => {
+                  clearAll()
+                  setIsCreating(false)
+                  setIsEditting(false)
+                  setTitle("")
+                  setMoney(0)
+                  setId(0)
+                }}>
+                  <Trash className='w-4 h-4' /> Clear
+                </Button>
+              </div>
             </div>
-          </Card>
+
+            <Card className='p-5 max-h-99 h-99 overflow-y-auto'>
+              <div className="space-y-3">
+                {transaction.length === 0 ? (
+                  <Card className='flex items-center justify-between text-gray-600 p-30 relative top-10'>
+                    No Transaction
+                  </Card>
+                ) : (
+                  transaction.map((transaction: Transaction) => (
+                    <motion.div
+                      key={transaction.id}
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.1 }}>
+                      <Card key={transaction.id} className="p-4 flex flex-col md:flex-row pb-4">
+                        <div className="w-full md:w-12/13 flex items-center justify-center flex-col text-center gap-3">
+                          <span className="font-bold text-lg text-gray-700">{transaction.title}</span>
+                          <span className={transaction.money > 0 ? "text-lg text-green-500" : "text-lg text-red-500"}>
+                            {transaction.money > 0
+                              ? `฿ +${transaction.money}`
+                              : `฿ ${transaction.money}`}
+                          </span>
+                          <span className="font-bold text-sm text-gray-700">Create at : {transaction.createdAt}</span>
+                        </div>
+                        <div className='w-full md:w-1/13 flex flex-col gap-2 items-end justify-end pr-2'>
+                          <Button variant="outline" size="sm" className='w-fit' onClick={() => {
+                            setTitle(transaction.title)
+                            setMoney(transaction.money)
+                            setIsEditting(true)
+                            setIsCreating(false)
+                            setId(transaction.id)
+                          }}>
+                            <Edit />
+                          </Button>
+                          <Button variant="destructive" size="sm" className='w-fit' onClick={() => deleteTransaction(transaction.id)}>
+                            <Trash />
+                          </Button>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </div>
         </div>
+
+
 
         {/* Chart Placeholder */}
         <Card className="p-6">
