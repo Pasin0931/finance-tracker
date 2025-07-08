@@ -8,6 +8,16 @@ import { motion } from 'framer-motion'
 import { Loader2, BarChart2, Plus, LogOut, Edit, Trash2, Calendar, Trash, XIcon } from 'lucide-react'
 import { Input } from "@/components/ui/input"
 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from "recharts"
+
 interface Transaction {
   id: number
   title: string
@@ -125,6 +135,24 @@ export default function Home() {
       </div>
     )
   }
+
+  // Prepare chart data
+  const monthlyData = transaction.reduce((acc, curr) => {
+    const date = new Date(curr.createdAt);
+    const month = date.toLocaleString('default', { month: 'short' });
+    const existing = acc.find(item => item.month === month);
+    if (existing) {
+      existing.income += curr.money > 0 ? curr.money : 0;
+      existing.expense += curr.money < 0 ? Math.abs(curr.money) : 0;
+    } else {
+      acc.push({
+        month,
+        income: curr.money > 0 ? curr.money : 0,
+        expense: curr.money < 0 ? Math.abs(curr.money) : 0,
+      });
+    }
+    return acc;
+  }, [] as { month: string, income: number, expense: number }[])
 
   return (
 
@@ -313,14 +341,31 @@ export default function Home() {
 
 
         {/* Chart Placeholder */}
-        <Card className="p-6">
+        <Card className="p-4">
+
           <div className="flex items-center gap-2 mb-4">
             <BarChart2 className="w-5 h-5 text-blue-600" />
             <h3 className="text-lg font-semibold text-gray-800">Monthly Overview</h3>
           </div>
-          <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
-            [Chart goes here]
-          </div>
+
+          <Card>
+            <div className="h-64">
+
+              {/* Graph details */}
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="income" fill="#16a34a" name="Income" />
+                  <Bar dataKey="expense" fill="#dc2626" name="Expense" />
+                </BarChart>
+              </ResponsiveContainer>
+
+            </div>
+          </Card>
+
         </Card>
       </motion.div>
     </motion.div>
